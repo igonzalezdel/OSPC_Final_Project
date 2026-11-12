@@ -1,92 +1,107 @@
-# NumPy Implementation – Helen's Contribution
+# NumPy Implementation and Disruption Scenario Generation – Helen's Contribution
+
+## AI Use and Acknowledgement
+
+ChatGPT (OpenAI) was used as an AI assistance tool throughout the development of this contribution. It helped clarify NumPy operations, vectorization, random number generation, reproducibility and testing concepts, as well as reviewing and improving the code documentation and report structure. The code was reviewed, adapted and tested to ensure consistency with the project's requirements and agreed interface.
 
 ## 1. Overview
 
-My contribution to the project focuses on implementing an optimized version of the Floyd–Warshall algorithm using NumPy.
+My contribution focuses on two aspects of the project:
 
-The objective is to calculate the shortest travel times between all pairs of railway stations while reducing the number of Python loops required by the traditional sequential implementation.
+- **NumPy optimization:** Implementing vectorized and batch versions of the Floyd–Warshall algorithm to calculate shortest travel times.
+- **Disruption scenario generation:** Creating reproducible Monte Carlo scenarios to simulate railway connection blockages and delays.
 
-I developed two approaches:
+The contribution consists of four main files:
 
-- **NumPy Vectorization:** Calculates shortest paths for one railway network using NumPy operations.
-- **Batch Processing:** Extends the vectorized implementation to calculate shortest paths for multiple railway disruption scenarios simultaneously.
+- `numpy_version.py`
+- `test_correctness.py`
+- `scenarios.py`
+- `test_scenarios.py`
 
-My contribution consists of two main files: `numpy_version.py` and `test_correctness.py`.
+## 2. NumPy Implementation – `numpy_version.py`
 
-## 2. File 1: `numpy_version.py`
+This file contains two implementations:
 
-This file contains the two implementations of the Floyd–Warshall algorithm.
+- **`floyd_warshall_numpy(distance_matrix)`:** Calculates shortest paths for a single railway network. It replaces the two inner loops of the traditional Floyd–Warshall algorithm with NumPy broadcasting.
+- **`floyd_warshall_batch(distance_matrices)`:** Extends the vectorized approach to process multiple disruption scenarios simultaneously using a three-dimensional NumPy array.
 
-### A. `floyd_warshall_numpy(distance_matrix)`
+Both functions validate their inputs, preserve the original matrices and return the shortest-distance matrices.
 
-This function calculates the shortest travel times between all pairs of stations in a single railway network.
+## 3. Correctness Tests – `test_correctness.py`
 
-Unlike the traditional sequential implementation, which uses three nested Python loops, this version keeps only the loop over intermediate stations and uses NumPy broadcasting to perform the calculations for all starting and destination stations simultaneously.
+This file uses Python's `unittest` framework and SciPy's Floyd–Warshall implementation as a reference to verify the NumPy algorithms.
 
-The main operations are:
+It contains seven tests covering:
 
-1. Create a copy of the original distance matrix to avoid modifying the input.
-2. Validate the matrix dimensions and values.
-3. Iterate through each station as a possible intermediate station.
-4. Calculate alternative routes through that station using NumPy broadcasting.
-5. Compare the alternative routes with the current distances using `np.minimum()`.
-6. Return the final shortest-distance matrix.
+- Agreement with SciPy's results.
+- Consistency between individual and batch calculations.
+- Blocked connections and disconnected stations.
+- Preservation of the original input matrix.
+- Rejection of invalid inputs.
 
-**Main optimization:** The two inner Python loops are replaced with NumPy matrix operations, allowing calculations to be performed on entire rows and columns simultaneously.
+**Result:** All seven tests passed.
 
-### B. `floyd_warshall_batch(distance_matrices)`
+## 4. Disruption Scenario Generation – `scenarios.py`
 
-This function extends the previous implementation to process multiple railway networks simultaneously.
+This file implements `generate_disruption_scenarios()`, which creates different versions of the original railway network by randomly applying disruptions.
 
-In our project, each matrix represents a different railway disruption scenario. For example, one scenario might involve a blocked connection between stations A and B, while another involves a blocked connection between stations B and C.
+Each scenario starts from a fresh copy of the original network. Existing connections are selected without replacement, and each selected connection is either:
 
-Instead of calling the single-network function separately for every scenario, this implementation uses a three-dimensional NumPy array:
+- **Blocked:** Its travel time is set to infinity (`np.inf`) in both directions.
+- **Delayed:** A random delay is added to its travel time in both directions.
 
-`(number_of_scenarios, number_of_stations, number_of_stations)`
+The current default simulation parameters are:
 
-NumPy broadcasting then performs the shortest-path calculations across all scenarios simultaneously.
+| Parameter | Default |
+|---|---:|
+| Number of scenarios | 100 |
+| Random seed | 42 |
+| Disruptions per scenario | 1–3 |
+| Probability of blockage | 50% |
+| Delay range | 5–30 minutes |
 
-**Main optimization:** Multiple disruption scenarios can be processed together using the same loop over intermediate stations.
+These are configurable initial assumptions and can be adjusted after group agreement.
 
-It is important to note that batch processing is an approach we want to evaluate, not an assumption that it will always be faster. Its performance still needs to be benchmarked.
+### Reproducibility
 
-## 3. File 2: `test_correctness.py`
+The generator uses NumPy's `SeedSequence` to create an independent random stream for each scenario. This ensures that the same seed and parameters produce the same scenarios, independently of how many MPI workers are used later.
 
-This file checks whether both NumPy implementations produce correct results.
+### Output
 
-It uses Python's built-in `unittest` framework and SciPy's Floyd–Warshall implementation as an independent reference.
+The function returns:
 
-The file currently contains seven tests:
+1. A three-dimensional NumPy array containing all modified railway networks, with shape `(scenarios, stations, stations)`.
+2. A list of records describing each disruption, including the affected link, disruption type and delay duration when applicable.
 
-| Test | What it checks |
-|---|---|
-| `test_matches_scipy` | Compares the NumPy results with SciPy. |
-| `test_batch_matches_individual_results` | Checks whether batch processing gives the same results as processing each scenario separately. |
-| `test_blocked_connection` | Verifies that an alternative route is found when a direct connection is blocked. |
-| `test_disconnected_stations` | Checks how the algorithm handles stations with no available route. |
-| `test_original_matrix_unchanged` | Ensures that the original input matrix is not modified. |
-| `test_invalid_input` | Checks that invalid matrices, negative values and NaN are rejected. |
-| `test_invalid_batch_input` | Checks that invalid batch dimensions are rejected. |
+The generated matrices can be passed directly to the NumPy batch implementation or distributed among the sequential and MPI implementations.
 
-**Current result:** All seven tests have passed successfully.
+## 5. Scenario Tests – `test_scenarios.py`
 
-## 4. Current Data and Future Integration
+This file contains seven tests verifying:
 
-At the moment, the tests use a small example railway network and artificially created disruption scenarios.
+- Reproducibility with the same random seed.
+- Correct number and dimensions of generated scenarios.
+- Symmetry and zero diagonal values.
+- Preservation of the original network.
+- Consistency between individual and batch Floyd–Warshall calculations.
+- Rejection of invalid network dimensions and scenario counts.
 
-These examples are only being used to develop and verify the implementations while the group's final dataset is being prepared.
+**Results:**
 
-Once the final dataset is available, the distance matrices and disruption scenarios will be supplied from the actual railway data.
+- Scenario generation tests: 7 passed.
+- Complete project test suite: 18 passed, including tests developed by other team members.
 
-The functions in `numpy_version.py` are designed to work with different compatible distance matrices, so the core algorithm should not need to be rewritten.
+## 6. Current Status and Next Steps
 
-## 5. Next Steps
+The implementations have been tested using a synthetic railway network. They are designed to follow the input format defined in `docs/interface.md`.
 
-The remaining work for my contribution is:
+Remaining tasks:
 
 - Integrate the final railway dataset.
-- Compare execution times against the sequential implementation.
-- Evaluate whether batch processing improves performance compared with processing scenarios individually.
-- Analyse and report the performance results.
+- Agree on the final disruption parameters with the group.
+- Benchmark NumPy vectorization and batch processing against the sequential implementation.
+- Integrate the generated scenarios with MPI.
+- Analyse execution time, speedup, efficiency and scalability.
 
-**In summary:** My contribution provides a NumPy-vectorized and batch-processing alternative to the sequential Floyd–Warshall algorithm, together with tests to verify its correctness.
+**Summary:** My contribution provides the NumPy shortest-path implementations and the reproducible disruption scenarios needed to evaluate railway network performance under different conditions.
+
