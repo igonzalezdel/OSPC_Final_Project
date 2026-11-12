@@ -97,14 +97,21 @@ minutes, with `inf` where no route exists.
 
 First compute the shortest travel times of the normal network
 (`baseline`) and of each scenario (`disrupted`). Then report three
-values for each scenario. All sums are over every pair of different
-stations `i != j`.
+values for each scenario.
+
+Passenger-based metrics sum over ordered origin-destination pairs
+`i != j`, while disconnected station pairs are counted only once
+using `i < j`.
 
 | Name | Type | Unit | Definition |
 |---|---|---|---|
-| `disconnected_pairs` | int | station pairs | Pairs `i < j` that have a route in `baseline` but no route in `disrupted`. Each pair is counted once, because the network is undirected. |
-| `lost_trips` | int | trips per day | Sum of `demand[i, j]` over pairs that have a route in `baseline` but no route in `disrupted`. |
-| `extra_delay_min` | float | passenger-minutes per day | Sum of `demand[i, j] * (disrupted[i, j] - baseline[i, j])` over pairs that still have a route in `disrupted`. |
+| `disconnected_pairs` | int | station pairs | Pairs `i < j` that have a route in `baseline` but no route in `disrupted`. Each pair is counted once because the network is undirected. |
+| `lost_trips` | int | trips per day | Sum of `demand[i, j]` over all ordered pairs `i != j` that are reachable in `baseline` but unreachable in `disrupted`. Passenger trips in both directions are counted. |
+| `extra_delay_min` | float | passenger-minutes per day | Sum of `demand[i, j] * (disrupted[i, j] - baseline[i, j])` over all ordered pairs `i != j` where both baseline and disrupted travel times are finite. |
+
+Although the railway network is undirected, passenger demand may
+differ by direction. Therefore, disconnected station pairs are
+counted once, but passenger trips and delays include both directions.
 
 Lost trips are not included in `extra_delay_min`, because their delay
 would be infinite. They are counted in `lost_trips` instead.
@@ -116,3 +123,13 @@ would be infinite. They are counted in `lost_trips` instead.
 - `extra_delay_min` is compared with a tolerance
   (`np.isclose(a, b, rtol=1e-9)`), because adding floating-point
   numbers in a different order can change the last digits.
+
+### Future extension: restoration priorities
+
+The three outputs above measure the impact of each disruption.
+Identifying which blocked connections should be restored first
+will be implemented separately.
+
+This will require an agreed ranking rule based on how much restoring
+each connection reduces disruption impacts, including how to
+account for disconnected journeys.
