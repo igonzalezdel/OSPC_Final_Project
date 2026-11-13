@@ -1,6 +1,6 @@
 # Sequential Monte Carlo simulation
 
-Author: Ander Díez. Task: "Build the sequential Monte Carlo simulation".
+Author: Ander Díez. Task: Build the sequential Monte Carlo simulation
 File: `src/simulation.py`. Tests: `tests/test_simulation.py`.
 
 ## What it does
