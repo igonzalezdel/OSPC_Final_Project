@@ -1,0 +1,31 @@
+{
+  "dataset_name": "Madrid Cercanias, 60 busiest stations",
+  "description": "Real Cercanias Madrid network (GTFS timetable) with origin-destination demand estimated from real boardings and alightings per station.",
+  "source": "Renfe Cercanias GTFS (fomento_transit.zip) and Renfe 'Volumen de viajeros por franja horaria (Madrid)' 2018, CC BY 4.0, datos.gob.es",
+  "provisional": false,
+  "travel_time_unit": "minutes",
+  "demand_unit": "trips per day",
+  "timetable_date": "20261111",
+  "ridership_year": 2018,
+  "number_of_stations": 60,
+  "share_of_daily_boardings_covered": 0.941,
+  "number_of_links": 63,
+  "madrid_trains_on_timetable_date": 822,
+  "gravity_beta_per_minute": 0.05,
+  "peak_slots": "07:00-09:30",
+  "daily_trips_in_demand": 853902,
+  "average_trip_minutes": 19.0,
+  "ridership_stations_missing_in_gtfs": [
+    "10400"
+  ],
+  "station_code_fixes": {
+    "70001": "70005"
+  },
+  "limitations": [
+    "Ridership is from 2018 (pre-COVID).",
+    "Demand between stations is estimated with a gravity model, not observed.",
+    "beta is an assumption; test other values for sensitivity.",
+    "Changing lines costs 0 minutes (no transfer penalty).",
+    "Travel time of a link is the median over both directions and all trains that day."
+  ]
+}
