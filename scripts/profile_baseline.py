@@ -1,10 +1,3 @@
-# AI USE AND REFERENCES
-#
-# This script was developed with assistance from Claude (Anthropic).
-# AI assistance was used to design the measurements (time breakdown,
-# CPU vs wall time, peak memory, cProfile) and the extrapolation of the
-# problem size. It runs the sequential simulation in src/simulation.py
-# without changing it. The code was reviewed and run by the author.
 
 """
 Profile the sequential baseline and choose the experiment size.
