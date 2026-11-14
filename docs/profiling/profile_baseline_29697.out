@@ -1,0 +1,24 @@
+node: haskell   job: 29697   cpus: 1
+CPU(s):                                  512
+Model name:                              AMD EPYC 9755 128-Core Processor
+Thread(s) per core:                      2
+Core(s) per socket:                      128
+Socket(s):                               2
+CPU(s) scaling MHz:                      52%
+L3 cache:                                1 GiB (32 instances)
+               total        used        free      shared  buff/cache   available
+Mem:             440          86         191           2         162         349
+measuring 1000 scenarios ...
+  wall 6.0 s, cpu/wall 0.99, peak 86 MB, 5.96 ms/scenario
+measuring 4000 scenarios ...
+  wall 23.9 s, cpu/wall 1.00, peak 257 MB, 5.93 ms/scenario
+measuring 16000 scenarios ...
+  wall 97.6 s, cpu/wall 1.00, peak 933 MB, 6.07 ms/scenario
+cProfile on 2000 scenarios ...
+2000 scenarios, 60 stations: input 0.003 s, compute 34.147 s, output 0.004 s -> /tmp/tmpevq3bgnr/
+
+time per scenario: 6.12 ms, fixed cost -0.32 s
+memory per scenario: 57.8 KB
+for 10 min on one worker: 99000 scenarios (predicted 10.1 min, 5.48 GB peak memory)
+serial share (input + generation + output) at 16000 scenarios: 0.50%
+results in results/profiling/profile.json and results/profiling/cprofile_top.txt
