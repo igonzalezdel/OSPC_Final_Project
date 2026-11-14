@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 # AI USE AND REFERENCES
