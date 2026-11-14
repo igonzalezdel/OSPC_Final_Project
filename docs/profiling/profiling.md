@@ -93,4 +93,26 @@ Running too many at once on the shared node can slow each run down, though, so t
 Each 1-worker job also needs ~5.5 GB of memory.
 
 Recommendation: keep 100,000 scenarios, because the brief requires at least 10 minutes on one core.
-Do at least 5 repetitions per worker count, and more where the spread
+Do at least 5 repetitions per worker count, and more where the spread is large.
+30 repetitions is possible but takes ~10 hours of runs, so the team should agree on it first.
+A smaller size would make 30 repetitions cheaper, but the sequential run would then be under 10 minutes.
+
+## Limitations
+
+- The 10-minute baseline was run once. The repeated runs (at least 5 per worker count) belong to the strong-scaling task.
+- The cluster is shared; other jobs on `haskell` can change runtimes.
+- Results are for the pure Python sequential version. The NumPy version will be much faster per scenario, so it may need a larger size to reach a measurable runtime.
+
+## How to reproduce
+
+From the repository root on the cluster:
+
+    sbatch slurm/profile_baseline.sh          # sizes 1k, 4k, 16k + cProfile (~5 min)
+    sbatch slurm/baseline_run.sh 100000       # full baseline (~10 min)
+
+## Files in this folder
+
+- `profile_baseline_29697.out`: Slurm output of step 1
+- `profile.json`: step 1 measurements, fit and machine info
+- `cprofile_top.txt`: cProfile output (top 15 functions)
+- `baseline_run_29700.out`: Slurm output of the full run, including `/usr/bin/time -v` and `summary.json`
