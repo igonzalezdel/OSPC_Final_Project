@@ -21,15 +21,48 @@ and the chunks are shared between the workers.
 | Results sorted by scenario | Chunks finish in any order; the output does not |
 
 ## Correctness
-`scenarios.csv` is identical, byte for byte, to the sequential output for 1, 2
-and 3 workers (`tests/test_parallel.py`). A test also checks that every rebuilt
+Task: Check that sequential and parallel results match (Antoni Gendra).
+Script: `scripts/check_equivalence.py`. Slurm: `slurm/check_equivalence.sh`.
+
+The script runs the sequential simulation once and the parallel driver for
+1, 2, 4, 8, 16 and 32 workers with the same seed, then compares every scenario:
+
+| Column | Rule |
+|---|---|
+| `n_disruptions`, `n_blocked`, `disconnected_pairs`, `lost_trips` | exactly equal |
+| `extra_delay_min` | rel 1e-9, abs 1e-6 passenger-minutes |
+
+Why that tolerance: each scenario runs the same code with the same operations
+in the same order whatever the number of workers, so the values should be
+bit-identical (and they are). The tolerance only allows for a different
+floating-point summation order, e.g. with `--kernel numpy`; 1e-6
+passenger-minutes is negligible next to the ~10^5-10^6 passenger-minutes of a
+typical scenario.
+
+It exits with code 1 on any disagreement, so the Slurm job fails visibly.
+
+    sbatch slurm/check_equivalence.sh 500
+
+Results:
+- Laptop VM, 200 scenarios: all worker counts bit-identical.
+- Cluster (`haskell`), 2,000 scenarios: sequential and 2 workers bit-identical (`cmp`).
+
+`tests/test_parallel.py` also checks 1-3 workers and that every rebuilt
 scenario matches `generate_disruption_scenarios` exactly.
+
+## Cores, not CPUs
+Slurm on this cluster counts each physical core as 2 CPUs (hyperthreads).
+Two workers on one core compete for it: in the JupyterHub session (2 CPUs =
+1 core) 2 workers gave only 1.2x (12.27 s to 10.05 s, 2,000 scenarios).
+For the scaling runs ask for **2 CPUs per worker**. The driver prints a warning
+when there are fewer physical cores than workers, and records CPUs and
+physical cores in `summary.json` and the timing CSV.
 
 ## How to run
 On the cluster, from the repository root:
 
-    sbatch --cpus-per-task=4 slurm/parallel_run.sh 4 2000 1      # quick test
-    sbatch --cpus-per-task=8 slurm/parallel_run.sh 8 100000 5    # 8 workers, 5 repetitions
+    sbatch --cpus-per-task=8  slurm/parallel_run.sh 4 2000 1      # quick test
+    sbatch --cpus-per-task=16 slurm/parallel_run.sh 8 100000 5    # 8 workers, 5 repetitions
 
 Or directly:
 
@@ -55,3 +88,6 @@ Options: `--workers`, `--scenarios`, `--seed`, the scenario parameters of
 | 2 | 2.29 s | 1.9x |
 
 Pool start-up took 0.1-0.2 s. Cluster numbers come from the scaling runs.
+
+First cluster test (job 29796, 2,000 scenarios): 4 workers on `--cpus-per-task=4`
+(2 physical cores) took 4.80 s compute vs 12.27 s sequential, 2.6x.

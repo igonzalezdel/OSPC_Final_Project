@@ -77,5 +77,39 @@ class TestSameResultsAsSequential(unittest.TestCase):
             self.assertAlmostEqual(a["extra_delay_min"], b["extra_delay_min"], places=6)
 
 
+class TestEquivalenceScript(unittest.TestCase):
+
+    def test_detects_differences_and_passes_equal_results(self):
+        import importlib.util
+        import pandas as pd
+        path = Path(__file__).resolve().parents[1] / "scripts" / "check_equivalence.py"
+        spec = importlib.util.spec_from_file_location("check_equivalence", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        expected = pd.DataFrame({"scenario": [0, 1], "n_disruptions": [1, 2], "n_blocked": [0, 1],
+                                 "disconnected_pairs": [0, 3], "lost_trips": [0, 10],
+                                 "extra_delay_min": [5.0, 0.0]})
+        self.assertEqual(module.compare(expected, expected.copy()), [])
+
+        wrong = expected.copy()
+        wrong.loc[1, "lost_trips"] = 11
+        wrong.loc[0, "extra_delay_min"] = 5.1
+        self.assertEqual(len(module.compare(expected, wrong)), 2)
+
+        tiny = expected.copy()
+        tiny.loc[0, "extra_delay_min"] = 5.0 + 1e-9  # below the tolerance
+        self.assertEqual(module.compare(expected, tiny), [])
+
+    def test_script_exit_code(self):
+        import importlib.util
+        path = Path(__file__).resolve().parents[1] / "scripts" / "check_equivalence.py"
+        spec = importlib.util.spec_from_file_location("check_equivalence", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        code = module.main(["--data", str(DATA), "--scenarios", "40", "--workers", "1", "2"])
+        self.assertEqual(code, 0)
+
+
 if __name__ == "__main__":
     unittest.main()

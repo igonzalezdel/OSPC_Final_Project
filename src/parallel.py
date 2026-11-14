@@ -179,6 +179,28 @@ def _ping(_):
     return os.getpid()
 
 
+def cpus_and_cores():
+    """Logical CPUs this process may use, and how many physical cores they are.
+
+    On the cluster Slurm gives whole cores, and each core shows up as 2 CPUs
+    (hyperthreads). Two workers on the same core compete for it, so the
+    scaling runs need one physical core per worker.
+    """
+    if not hasattr(os, "sched_getaffinity"):
+        return os.cpu_count(), None
+    cpus = sorted(os.sched_getaffinity(0))
+    cores = set()
+    for cpu in cpus:
+        topology = Path(f"/sys/devices/system/cpu/cpu{cpu}/topology")
+        try:
+            package = (topology / "physical_package_id").read_text().strip()
+            core = (topology / "core_id").read_text().strip()
+        except OSError:
+            return len(cpus), None
+        cores.add((package, core))
+    return len(cpus), len(cores)
+
+
 # --------------------------------------------------
 # 4. Output files
 # --------------------------------------------------
@@ -254,6 +276,8 @@ def main(argv=None):
     rows, timing = run_parallel(network, demand, args.scenarios, args.workers,
                                 args.seed, params, args.kernel, args.chunks_per_worker)
 
+    n_cpus, n_cores = cpus_and_cores()
+
     out_dir = Path(args.out or f"results/parallel_w{args.workers}_{args.scenarios}")
     out_dir.mkdir(parents=True, exist_ok=True)
     t0 = time.perf_counter()
@@ -288,7 +312,8 @@ def main(argv=None):
         },
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
         "node": platform.node(),
-        "cpus_available": len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else os.cpu_count(),
+        "cpus_available": n_cpus,
+        "physical_cores_available": n_cores,
         "python": platform.python_version(),
         "numpy": np.__version__,
         "date": date.today().isoformat(),
@@ -308,13 +333,17 @@ def main(argv=None):
             "compute_s": round(timing["compute"], 4),
             "output_s": round(output_s, 4),
             "total_s": round(total_s, 4),
+            "cpus": n_cpus,
+            "physical_cores": n_cores if n_cores is not None else "",
             "slurm_job_id": summary["slurm_job_id"] or "",
             "node": summary["node"],
             "date": summary["date"],
         })
 
-    if summary["cpus_available"] and args.workers > summary["cpus_available"]:
-        print(f"WARNING: {args.workers} workers but only {summary['cpus_available']} CPUs available")
+    available = n_cores if n_cores is not None else n_cpus
+    if available and args.workers > available:
+        print(f"WARNING: {args.workers} workers but only {available} physical cores "
+              f"({n_cpus} CPUs). Timings will not show real speedup.")
     print(f"{args.scenarios} scenarios, {args.workers} workers ({args.kernel}): "
           f"startup {timing['pool_startup']:.2f} s, compute {timing['compute']:.2f} s, "
           f"total {total_s:.2f} s -> {out_dir}/")
