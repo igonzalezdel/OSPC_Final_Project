@@ -1,0 +1,65 @@
+{
+  "machine": {
+    "hostname": "haskell",
+    "cpu_model": "AMD EPYC 9755 128-Core Processor",
+    "cpus_on_node": 512,
+    "slurm_job_id": "29697",
+    "slurm_cpus_per_task": "1",
+    "omp_num_threads": "1",
+    "python": "3.11.5",
+    "numpy": "1.26.2"
+  },
+  "dataset": "data/madrid_cercanias (60 stations)",
+  "seed": 42,
+  "runs": [
+    {
+      "scenarios": 1000,
+      "wall_s": 6.031659755855799,
+      "cpu_s": 5.9899782649999995,
+      "cpu_over_wall": 0.993089548724075,
+      "peak_memory_mb": 86.0,
+      "input_s": 0.04072946589440107,
+      "scenario_generation_s": 0.030659561045467854,
+      "floyd_warshall_and_metrics_s": 5.956159837078303,
+      "output_s": 0.0012638913467526436,
+      "ms_per_scenario": 5.956159837078303
+    },
+    {
+      "scenarios": 4000,
+      "wall_s": 23.85489392094314,
+      "cpu_s": 23.852577662999998,
+      "cpu_over_wall": 0.9999029021906021,
+      "peak_memory_mb": 257.02734375,
+      "input_s": 0.0020842389203608036,
+      "scenario_generation_s": 0.11508294707164168,
+      "floyd_warshall_and_metrics_s": 23.729718593880534,
+      "output_s": 0.004808740224689245,
+      "ms_per_scenario": 5.9324296484701335
+    },
+    {
+      "scenarios": 16000,
+      "wall_s": 97.63502608798444,
+      "cpu_s": 97.628608365,
+      "cpu_over_wall": 0.9999342682309661,
+      "peak_memory_mb": 932.8515625,
+      "input_s": 0.0019474169239401817,
+      "scenario_generation_s": 0.46159038692712784,
+      "floyd_warshall_and_metrics_s": 97.13997038919479,
+      "output_s": 0.02141934586688876,
+      "ms_per_scenario": 6.071248149324674
+    }
+  ],
+  "fit": {
+    "seconds_per_scenario": 0.006118734876935684,
+    "fixed_seconds": -0.32395088362195323,
+    "memory_mb_per_scenario": 0.05641731770833336,
+    "fixed_memory_mb": 30.371744791666774
+  },
+  "recommendation": {
+    "target_minutes": 10.0,
+    "scenarios_needed": 99000,
+    "predicted_wall_minutes": 10.09051336555018,
+    "predicted_peak_memory_gb": 5.484068552652998
+  },
+  "serial_share_largest_run": 0.004967040714271275
+}
