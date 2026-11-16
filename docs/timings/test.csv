@@ -1,0 +1,15 @@
+timestamp_utc,implementation,git_commit,dataset,workers,stations,scenarios,seed,repetition,load_s,compute_s,write_s,elapsed_s,node,slurm_job_id,node_load_1m,pool_startup_s,cpus,physical_cores,kernel
+2026-11-15T13:00:52Z,multiprocessing,19d45b3,"Madrid Cercanias, 60 busiest stations",2,60,2000,42,1,0.035,6.6947,0.0017,7.3703,julia,30116,1.09,0.6302,4,2,python
+2026-11-15T13:00:52Z,sequential,19d45b3,"Madrid Cercanias, 60 busiest stations",1,60,2000,42,1,0.0361,13.1618,0.0026,13.2032,julia,30114,1.09,0.0,2,1,python
+2026-11-15T13:00:52Z,multiprocessing,19d45b3,"Madrid Cercanias, 60 busiest stations",1,60,2000,42,1,0.0348,13.1167,0.0018,13.792,julia,30115,1.09,0.6302,2,1,python
+2026-11-15T13:01:00Z,multiprocessing,19d45b3,"Madrid Cercanias, 60 busiest stations",2,60,2000,42,2,0.0015,6.596,0.0018,6.6976,julia,30116,1.69,0.09,4,2,python
+2026-11-15T13:01:06Z,sequential,19d45b3,"Madrid Cercanias, 60 busiest stations",1,60,2000,42,2,0.0015,13.4832,0.0026,13.4901,julia,30114,2.04,0.0,2,1,python
+2026-11-15T13:01:07Z,multiprocessing,19d45b3,"Madrid Cercanias, 60 busiest stations",1,60,2000,42,2,0.0014,13.0752,0.0018,13.1836,julia,30115,2.04,0.0968,2,1,python
+2026-11-15T13:01:20Z,multiprocessing,19d45b3,"Madrid Cercanias, 60 busiest stations",4,60,2000,42,1,0.0017,3.5738,0.0018,3.7473,julia,30117,2.25,0.1613,8,4,python
+2026-11-15T13:01:23Z,multiprocessing,19d45b3,"Madrid Cercanias, 60 busiest stations",4,60,2000,42,2,0.0014,3.5194,0.0018,3.6898,julia,30117,2.25,0.1585,8,4,python
+2026-11-15T13:01:50Z,multiprocessing,19d45b3,"Madrid Cercanias, 60 busiest stations",16,60,2000,42,1,0.0019,0.9554,0.0018,1.589,julia,30119,4.82,0.6207,32,16,python
+2026-11-15T13:01:50Z,multiprocessing,19d45b3,"Madrid Cercanias, 60 busiest stations",8,60,2000,42,1,0.0014,2.1075,0.0018,2.4328,julia,30118,4.82,0.313,16,8,python
+2026-11-15T13:01:51Z,multiprocessing,19d45b3,"Madrid Cercanias, 60 busiest stations",16,60,2000,42,2,0.0014,0.9756,0.0018,1.6072,julia,30119,4.82,0.6186,32,16,python
+2026-11-15T13:01:52Z,multiprocessing,19d45b3,"Madrid Cercanias, 60 busiest stations",8,60,2000,42,2,0.0015,2.1803,0.0017,2.5128,julia,30118,4.82,0.3201,16,8,python
+2026-11-15T13:08:50Z,multiprocessing,19d45b3,"Madrid Cercanias, 60 busiest stations",32,60,2000,42,1,0.0023,0.6826,0.002,2.0761,julia,30120,123.3,1.3779,64,32,python
+2026-11-15T13:08:52Z,multiprocessing,19d45b3,"Madrid Cercanias, 60 busiest stations",32,60,2000,42,2,0.0016,0.7018,0.0019,2.1066,julia,30120,123.3,1.3897,64,32,python
