@@ -36,6 +36,8 @@ The measurements were collected on the same HPC node (`haskell`).
 - [Scaling summary CSV](plots/strong_scaling_elapsed_s.csv) — median runtimes, min–max variation, speedup, and efficiency.
 - [Raw benchmark measurements](timings/strong_scaling_haskell.csv) — the underlying HPC timing records.
 - [Plotting script](../scripts/plot_scaling.py) — generates the figures and summary CSV from the recorded measurements.
+- [Scaling interpretation](scaling_interpretation.md) — Amdahl model compared with the measured speedup, measured overhead, and the wall-time versus CPU-cost trade-off.
+- [Amdahl comparison plot](plots/strong_scaling_elapsed_s_amdahl.png) — measured, ideal and Amdahl-predicted speedup and efficiency.
 
 Speedup is calculated relative to the one-worker multiprocessing baseline. The figures illustrate how performance changes as additional workers are allocated to the same workload.
 

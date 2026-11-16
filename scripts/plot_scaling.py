@@ -17,9 +17,18 @@
 # with the min-max spread, and mark plots with too few repetitions
 # as preliminary.
 #
+# Update (16 Nov 2026): the initial implementation of the Amdahl
+# comparison option (--amdahl-f) was developed with assistance from
+# Claude (Anthropic, https://claude.ai). I used Claude to understand
+# how to draw an Amdahl's law prediction next to the measured speedup,
+# and to improve and correct the wording of the comments and
+# documentation. I also checked the model values against the
+# serial-fraction analysis in docs/serial_fraction_estimate.md.
+#
 # References:
 # https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.errorbar.html
 # https://docs.python.org/3/library/statistics.html#statistics.median
+# https://en.wikipedia.org/wiki/Amdahl%27s_law
 
 """
 Plot strong-scaling speedup and efficiency from a timing CSV.
@@ -48,9 +57,21 @@ Usage (from the repository root):
     python scripts/plot_scaling.py results/timings/strong_scaling.csv \
         --metric compute_s --baseline multiprocessing
 
+Optional Amdahl comparison: --amdahl-f adds the speedup predicted by
+Amdahl's law, S(p) = 1 / (f + (1 - f) / p), for a serial fraction f
+that you choose (for example the profile-based estimate in
+docs/serial_fraction_estimate.md). The fraction is an input to the
+model, not something fitted to the measured speedup. Use --amdahl-label
+to say where f comes from:
+    python scripts/plot_scaling.py docs/timings/strong_scaling_haskell.csv \
+        --scenarios 100000 --kernel python --baseline multiprocessing \
+        --amdahl-f 0.005436 --amdahl-label "profile-based proxy"
+
 Outputs (in --out-dir, default results/plots/):
     strong_scaling_<metric>.png       speedup and efficiency plot
     strong_scaling_<metric>.csv       the numbers behind the plot
+With --amdahl-f, the files are named strong_scaling_<metric>_amdahl.*
+so the plain plot is not overwritten.
 
 On the cluster, matplotlib may need its own module:
     module load matplotlib/3.8.2-gfbf-2023b
@@ -219,6 +240,11 @@ def plot(rows, baseline, table, warnings, args):
     left.plot(ideal, ideal, "--", color="grey", label="Ideal (S = p)")
     left.errorbar(workers, speedup, yerr=[below, above], marker="o", capsize=4,
                   label=f"Measured median (min–max of runs)")
+    if args.amdahl_f is not None:
+        # Amdahl curve at every integer worker count, so it is drawn smoothly
+        model_p = list(range(1, max(ideal) + 1))
+        left.plot(model_p, [amdahl_speedup(p, args.amdahl_f) for p in model_p], ":",
+                  color="darkorange", linewidth=2, label=amdahl_legend(args))
     left.set_xscale("log", base=2)
     left.set_yscale("log", base=2)
     left.set_xticks(ideal, [str(p) for p in ideal])
@@ -232,6 +258,9 @@ def plot(rows, baseline, table, warnings, args):
     # Efficiency against the ideal value 1
     right.axhline(1.0, linestyle="--", color="grey", label="Ideal (E = 1)")
     right.plot(workers, efficiency, marker="o", label="Measured")
+    if args.amdahl_f is not None:
+        right.plot(model_p, [amdahl_speedup(p, args.amdahl_f) / p for p in model_p], ":",
+                   color="darkorange", linewidth=2, label=amdahl_legend(args))
     right.set_xscale("log", base=2)
     right.set_xticks(ideal, [str(p) for p in ideal])
     right.set_ylim(0, max(1.1, max(efficiency) * 1.1))
@@ -256,30 +285,66 @@ def plot(rows, baseline, table, warnings, args):
     footer = (f"T1 = median of {baseline['reps']} runs of the {baseline_name} "
               f"({baseline['median']:.2f} s).  Source: {args.csv.name}.  "
               f"Nodes: {nodes}.  Commit: {commits}.")
+    if args.amdahl_f is not None:
+        footer += (f"\nAmdahl model: S(p) = 1 / (f + (1 - f) / p) with f = "
+                   f"{args.amdahl_f:.4%} ({args.amdahl_label}); an input to the model, "
+                   f"not fitted to the measurements.")
     figure.text(0.5, 0.01, footer, ha="center", fontsize=8)
-    figure.tight_layout(rect=(0, 0.04, 1, 0.95))
+    figure.tight_layout(rect=(0, 0.07 if args.amdahl_f is not None else 0.04, 1, 0.95))
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    image = args.out_dir / f"strong_scaling_{args.metric}.png"
+    image = args.out_dir / f"{output_name(args)}.png"
     figure.savefig(image, dpi=150)
     plt.close(figure)
     return image
 
 
 def save_table(baseline, table, args):
-    path = args.out_dir / f"strong_scaling_{args.metric}.csv"
+    path = args.out_dir / f"{output_name(args)}.csv"
+    columns = ["median_s", "min_s", "max_s", "speedup",
+               "speedup_low", "speedup_high", "efficiency"]
+    if args.amdahl_f is not None:
+        columns += ["amdahl_speedup", "amdahl_efficiency", "measured_vs_amdahl"]
     with open(path, "w", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
-        writer.writerow(["baseline", args.baseline, "baseline_reps", baseline["reps"],
-                         "T1_median_s", round(baseline["median"], 4)])
-        writer.writerow(["workers", "reps", "median_s", "min_s", "max_s",
-                         "speedup", "speedup_low", "speedup_high", "efficiency"])
+        first_line = ["baseline", args.baseline, "baseline_reps", baseline["reps"],
+                      "T1_median_s", round(baseline["median"], 4)]
+        if args.amdahl_f is not None:
+            first_line += ["amdahl_f", args.amdahl_f, "amdahl_source", args.amdahl_label]
+        writer.writerow(first_line)
+        writer.writerow(["workers", "reps"] + columns)
         for line in table:
             writer.writerow([line["workers"], line["reps"]]
-                            + [round(line[name], 4) for name in
-                               ["median_s", "min_s", "max_s", "speedup",
-                                "speedup_low", "speedup_high", "efficiency"]])
+                            + [round(line[name], 4) for name in columns])
     return path
+
+
+# --------------------------------------------------
+# Amdahl's law helpers
+# --------------------------------------------------
+
+def amdahl_speedup(workers, fraction):
+    """Speedup predicted by Amdahl's law for a serial fraction f."""
+    return 1 / (fraction + (1 - fraction) / workers)
+
+
+def amdahl_legend(args):
+    return f"Amdahl model, f = {args.amdahl_f:.2%} ({args.amdahl_label})"
+
+
+def add_amdahl(table, args):
+    """Add the model values next to the measured ones."""
+    for line in table:
+        model = amdahl_speedup(line["workers"], args.amdahl_f)
+        line["amdahl_speedup"] = model
+        line["amdahl_efficiency"] = model / line["workers"]
+        # Measured speedup as a fraction of the model (1.0 = matches the model)
+        line["measured_vs_amdahl"] = line["speedup"] / model
+
+
+def output_name(args):
+    name = f"strong_scaling_{args.metric}"
+    return name + "_amdahl" if args.amdahl_f is not None else name
 
 
 # --------------------------------------------------
@@ -303,7 +368,13 @@ def main(argv=None):
     parser.add_argument("--preliminary", action="store_true",
                         help="always mark the plot as preliminary")
     parser.add_argument("--out-dir", type=Path, default=Path("results/plots"))
+    parser.add_argument("--amdahl-f", type=float,
+                        help="also draw Amdahl's law for this serial fraction (e.g. 0.005436)")
+    parser.add_argument("--amdahl-label", default="user-supplied",
+                        help="where the serial fraction comes from, shown on the plot")
     args = parser.parse_args(argv)
+    if args.amdahl_f is not None and not 0 <= args.amdahl_f < 1:
+        sys.exit("--amdahl-f must be a fraction between 0 and 1 (e.g. 0.005436 for 0.5436%)")
 
     rows = select_rows(read_rows(args.csv), args)
     if not rows:
@@ -312,6 +383,8 @@ def main(argv=None):
 
     baseline, table = scaling_table(rows, args)
     warnings = find_warnings(rows, baseline, table, args)
+    if args.amdahl_f is not None:
+        add_amdahl(table, args)
     image = plot(rows, baseline, table, warnings, args)
     numbers = save_table(baseline, table, args)
 
@@ -320,9 +393,13 @@ def main(argv=None):
     print(f"{'workers':>7} {'reps':>4} {'median s':>9} {'min s':>8} {'max s':>8} "
           f"{'speedup':>8} {'efficiency':>10}")
     for line in table:
-        print(f"{line['workers']:7d} {line['reps']:4d} {line['median_s']:9.3f} "
-              f"{line['min_s']:8.3f} {line['max_s']:8.3f} {line['speedup']:8.2f} "
-              f"{line['efficiency']:10.2f}")
+        text = (f"{line['workers']:7d} {line['reps']:4d} {line['median_s']:9.3f} "
+                f"{line['min_s']:8.3f} {line['max_s']:8.3f} {line['speedup']:8.2f} "
+                f"{line['efficiency']:10.2f}")
+        if args.amdahl_f is not None:
+            text += (f"   Amdahl {line['amdahl_speedup']:6.2f}"
+                     f"   measured/Amdahl {line['measured_vs_amdahl']:5.1%}")
+        print(text)
     for message in warnings:
         print("WARNING:", message)
     if warnings:
