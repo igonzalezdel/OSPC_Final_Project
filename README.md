@@ -368,15 +368,40 @@ Our official measurements must:
 
 The timing-data specification is documented in [docs/timing_schema.md](docs/timing_schema.md).
 
-### Benchmark integration
+### Benchmark integration and scaling results
 
-The repository includes `slurm/benchmark.sh` and `slurm/submit_strong_scaling.sh` for coordinating repeated benchmark runs.
+The benchmarking pipeline uses `scripts/run_benchmark.py` to collect timing measurements and `scripts/validate_timings.py` to check the resulting CSV files. Slurm scripts in `slurm/` coordinate benchmark execution and repetitions.
 
-These scripts depend on `scripts/run_benchmark.py`, whose integration and validation must be confirmed before using the complete benchmarking pipeline.
+The first strong-scaling experiment was completed using 100,000 scenarios on the `haskell` HPC node, with five repetitions for each worker configuration (1, 2, 4, 8, 16, and 32 workers).
 
-The scripts currently specify `results/timings/strong_scaling.csv` as the default strong-scaling timing output.
+Using the one-worker multiprocessing median as the baseline:
 
-We will update this section with the validated benchmark commands, initial scaling plots, and corresponding timing data once the integration is complete.
+- **1 worker:** 590.58 seconds
+- **32 workers:** 24.70 seconds
+- **Speedup at 32 workers:** 23.91×
+- **Parallel efficiency at 32 workers:** approximately 74.7%
+
+Scaling is close to ideal at 2 and 4 workers, with decreasing efficiency at higher worker counts.
+
+**Results and reproducibility:**
+
+- [Strong-scaling plots](docs/plots/strong_scaling_elapsed_s.png)
+- [Scaling summary CSV](docs/plots/strong_scaling_elapsed_s.csv)
+- [Raw HPC timing measurements](docs/timings/strong_scaling_haskell.csv)
+- [Benchmark methodology](docs/benchmarking.md)
+- [Plotting script](scripts/plot_scaling.py)
+
+To reproduce the plots from the existing measurements:
+
+```bash
+python scripts/plot_scaling.py docs/timings/strong_scaling_haskell.csv --scenarios 100000 --kernel python --baseline multiprocessing
+```
+
+The figures use the verified single-node dataset. The older `docs/timings/strong_scaling.csv` contains measurements from different nodes and should not be used for the final scaling comparison.
+
+For additional implementation details, experiments, and validation evidence, see the [technical documentation index](docs/README.md).
+
+The complete benchmark workflow and broader performance analysis remain subject to further validation.
 
 ## 9. Validation and Reproducibility
 
@@ -410,31 +435,33 @@ For the final submission, we will preserve the required raw timing CSVs, plottin
 | JupyterLab server stops or restarts | Reopen the terminal, return to the repository, and reload the module |
 | Benchmark runner cannot be found | Confirm that the required benchmarking code has been merged into the current branch |
 
+
 ## AI USE AND REFERENCES
 
-This README was prepared with assistance from ChatGPT (OpenAI).
+This README was prepared with assistance from ChatGPT (OpenAI, https://chatgpt.com).
 
-We used ChatGPT to help structure the documentation, explain the HPC execution workflow, interpret Slurm output, clarify the simulation metrics, and review the reproducibility instructions against the existing implementation.
+ChatGPT was used to support the organization and refinement of the documentation, clarify technical explanations, and improve the clarity and reproducibility of the instructions.
 
 Prompts included requests to:
 
-- Explain the setup and use of HPC environment modules and Slurm commands
-- Interpret simulation results and resource-allocation information
-- Check the equivalence of sequential and multiprocessing outputs
-- Document a small reproducible checkpoint configuration
-- Review the README for technical accuracy, clarity, and consistency with the project
+- Explain HPC commands, execution workflows, and performance concepts
+- Clarify simulation outputs and benchmark results
+- Review documentation for accuracy, clarity, and completeness
+- Improve the organization and presentation of existing project information
 
-The checkpoint commands were executed on the University HPC cluster, and the reported results were verified against the generated outputs.
+The README was reviewed and validated by its author against the project's implementation, available documentation, and recorded HPC results. Commands and experiments described as completed were executed on the University HPC cluster, with their results checked against the corresponding outputs.
 
 **References**
 
-- Official Operating Systems & Parallel Computing group project assignment
-- `data/madrid_cercanias/metadata.json`
-- `docs/interface.md`
-- `src/simulation.py`
-- `src/parallel.py`
-- `slurm/baseline_run.sh`
-- `slurm/parallel_run.sh`
-- `docs/profiling/profiling.md`
-- `docs/timing_schema.md`
-- `docs/validation/checkpoint_smoke_test.md`
+- Matteo Turilli, *Operating Systems and Parallel Computing Group Assignment: Parallel Data Analytics on the HPC Cluster*.
+- [Technical documentation](docs/README.md)
+- [Railway dataset and source information](data/madrid_cercanias/metadata.json)
+- [Railway data interface](docs/interface.md)
+- [Sequential Monte Carlo implementation](src/simulation.py)
+- [Parallel multiprocessing implementation](src/parallel.py)
+- [Benchmarking methodology](docs/benchmarking.md)
+- [Baseline profiling](docs/profiling/profiling.md)
+- [Timing CSV specification](docs/timing_schema.md)
+- [Checkpoint validation](docs/validation/checkpoint_smoke_test.md)
+- [Strong-scaling results](docs/plots/strong_scaling_elapsed_s.png)
+- [Raw benchmark measurements](docs/timings/strong_scaling_haskell.csv)
