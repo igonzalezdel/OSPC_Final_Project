@@ -1,0 +1,79 @@
+node: haskell   job: 30332   scenarios: 5
+CPU(s):                                  512
+Model name:                              AMD EPYC 9755 128-Core Processor
+CPU(s) scaling MHz:                      54%
+5 scenarios, 60 stations: input 0.003 s, compute 0.037 s, output 0.001 s -> results/baseline_5/
+	Command being timed: "python -m src.simulation --scenarios 5 --out results/baseline_5"
+	User time (seconds): 0.12
+	System time (seconds): 0.02
+	Percent of CPU this job got: 75%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.20
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 28704
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 5288
+	Voluntary context switches: 1513
+	Involuntary context switches: 6
+	Swaps: 0
+	File system inputs: 136
+	File system outputs: 24
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+{
+  "version": "sequential",
+  "workers": 1,
+  "seed": 42,
+  "n_scenarios": 5,
+  "n_stations": 60,
+  "scenario_parameters": {
+    "min_disruptions": 1,
+    "max_disruptions": 3,
+    "block_probability": 0.5,
+    "min_delay_min": 5,
+    "max_delay_min": 30
+  },
+  "dataset": "Madrid Cercanias, 60 busiest stations",
+  "units": {
+    "travel_time": "minutes",
+    "disconnected_pairs": "station pairs (each pair counted once)",
+    "lost_trips": "passenger trips per day",
+    "extra_delay_min": "passenger-minutes per day"
+  },
+  "aggregate": {
+    "disconnected_pairs": {
+      "mean": 90.0,
+      "median": 59.0,
+      "max": 275.0,
+      "total": 450.0
+    },
+    "lost_trips": {
+      "mean": 19855.2,
+      "median": 7606.0,
+      "max": 57915.0,
+      "total": 99276.0
+    },
+    "extra_delay_min": {
+      "mean": 1641548.5,
+      "median": 1975375.0,
+      "max": 2896130.0,
+      "total": 8207742.5
+    }
+  },
+  "timing_s": {
+    "input": 0.0029957061633467674,
+    "compute": 0.03715609014034271,
+    "compute_scenario_generation": 0.0005924040451645851,
+    "compute_shortest_paths_and_metrics": 0.03656368609517813,
+    "output": 0.0005737962201237679
+  },
+  "python": "3.11.5",
+  "numpy": "1.26.2",
+  "date": "2026-11-15"
+}
