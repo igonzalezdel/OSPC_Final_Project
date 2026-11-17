@@ -101,8 +101,11 @@ OSPC_Final_Project/
 ├── scripts/                   # Validation and benchmarking utilities
 ├── tests/                     # Correctness tests
 ├── docs/                      # Technical documentation and evidence
+├── report.md                  # Working notes on individual contributions
 └── README.md
 ```
+
+`report.md` contains working notes on individual contributions. It is **not** the final project report: the final report will be submitted separately as a PDF, as required by the assignment.
 
 Repository: https://github.com/igonzalezdel/OSPC_Final_Project
 
@@ -399,9 +402,95 @@ python scripts/plot_scaling.py docs/timings/strong_scaling_haskell.csv --scenari
 
 The figures use the verified single-node dataset. The older `docs/timings/strong_scaling.csv` contains measurements from different nodes and should not be used for the final scaling comparison.
 
-For additional implementation details, experiments, and validation evidence, see the [technical documentation index](docs/README.md).
+### How the strong-scaling sweep was submitted
 
-The complete benchmark workflow and broader performance analysis remain subject to further validation.
+The sweep in `docs/timings/strong_scaling_haskell.csv` consists of seven Slurm jobs (sequential reference, plus 1, 2, 4, 8, 16 and 32 workers), each running five repetitions of one configuration. The seven jobs were Slurm jobs 30693–30699, all from git commit `05edb4e`.
+
+To submit a new sweep from the repository root on the cluster:
+
+1. Choose a **new CSV file name for every sweep**, for example with the date. `scripts/run_benchmark.py` appends one row per run to the file it is given, so reusing an existing file (such as `strong_scaling_haskell.csv`) mixes old and new rows and duplicates results. Pass the node as the fourth argument so all seven jobs request the same node:
+
+   ```bash
+   CSV=results/timings/strong_scaling_$(date +%Y%m%d_%H%M).csv
+   bash slurm/submit_strong_scaling.sh 100000 5 "$CSV" haskell
+   ```
+
+2. `submit_strong_scaling.sh` only **submits** the seven jobs and returns at once; the jobs then wait in the queue and run on their own. Wait until all seven have finished before validating:
+
+   ```bash
+   squeue -u "$USER"
+   sacct -u "$USER" --format=JobID,JobName,State,ExitCode,Elapsed,NodeList
+   ```
+
+   Repeat `squeue` until no `railway_benchmark` job is listed, then check with `sacct` that all seven show `COMPLETED` and exit code `0:0`. At 100,000 scenarios the slowest jobs (sequential and 1 worker) run five repetitions of about 10 minutes each, so they take about 50 minutes, plus queue time.
+
+3. Only then validate the timing file (use the same `$CSV`; in a new terminal, type its name again):
+
+   ```bash
+   python scripts/validate_timings.py "$CSV" --min-reps 5
+   ```
+
+   Validating while jobs are still running reports missing repetitions, because their rows have not been written yet.
+
+**Node selection.** The nodes run at different speeds, so all jobs of one sweep must run on the same node; a sweep spread over several nodes is not a valid strong-scaling result (this is what happened to the older `docs/timings/strong_scaling.csv`). Node selection is **implemented in the script on `main`**: `slurm/submit_strong_scaling.sh` takes the node as an optional fourth argument and forwards it to each of the seven `sbatch` submissions as `--nodelist`. Without the fourth argument, Slurm may place the jobs on different nodes.
+
+This option **has not yet been independently verified by running a new HPC job**. The existing 35-row dataset `docs/timings/strong_scaling_haskell.csv` is still valid (all 35 rows record `node = haskell`), and checking the `node` column of the timing CSV after every sweep remains a sensible check.
+
+As an optional alternative, a single configuration can also be submitted manually with an explicit node and the same new CSV for the whole sweep, for example:
+
+```bash
+mkdir -p logs
+sbatch --nodelist=haskell --cpus-per-task=16 slurm/benchmark.sh multiprocessing 8 100000 5 "$CSV"
+```
+
+### Where to find the loading, computation and writing times
+
+The assignment requires computation to be timed separately from loading the data and writing the results. Every timing row records these separately:
+
+| Column | Meaning |
+|---|---|
+| `load_s` | Time to load the railway network and passenger demand |
+| `compute_s` | Time to generate the scenarios and run the simulation |
+| `write_s` | Time to write the results |
+| `pool_startup_s` | Time to start the worker processes (multiprocessing only) |
+| `elapsed_s` | Total time of the run, including pool start-up |
+
+- Raw values for every run: [docs/timings/strong_scaling_haskell.csv](docs/timings/strong_scaling_haskell.csv)
+- Median breakdown per worker count: Section 6 of [docs/serial_fraction_estimate.md](docs/serial_fraction_estimate.md)
+- Column definitions: [docs/timing_schema.md](docs/timing_schema.md) and [docs/benchmarking.md](docs/benchmarking.md)
+
+`elapsed_s` already includes `pool_startup_s`, so the two must not be added together.
+
+### Serial fraction (Amdahl's law)
+
+The serial fraction is estimated with two methods in [docs/serial_fraction_estimate.md](docs/serial_fraction_estimate.md):
+
+- **Profile-based proxy:** 0.54% of the sequential run is spent outside the computation (loading, scenario generation and writing).
+- **Effective Amdahl fraction** calculated from the measured speedups: 3.53% at 8 workers, 1.94% at 16 and 1.09% at 32.
+
+The two numbers measure different things and should not be treated as equal. The effective fraction changes with the worker count, so it is not one constant serial fraction. To reproduce the calculation:
+
+```bash
+python scripts/estimate_serial_fraction.py
+```
+
+### What the November 17 checkpoint verifies, and what it does not
+
+**Verified for the checkpoint:**
+
+- The small sequential and two-worker multiprocessing runs give identical results (Section 5).
+- The sequential simulation runs correctly through Slurm (Section 6).
+- The strong-scaling sweep: 35 runs on one node, five repetitions per configuration, validated with `scripts/validate_timings.py`.
+- The plot, the summary CSV and the serial-fraction estimates can be regenerated from the committed timing CSV with the commands above.
+
+**Not yet verified (planned before the final submission):**
+
+- Running the whole pipeline on the cluster from a fresh clone of the repository.
+- Weak scaling.
+- A second parallel approach and the MPI version.
+- HPC smoke-test verification of the already implemented node-selection option.
+
+For additional implementation details, experiments, and validation evidence, see the [technical documentation index](docs/README.md).
 
 ## 9. Validation and Reproducibility
 
@@ -450,6 +539,16 @@ Prompts included requests to:
 - Improve the organization and presentation of existing project information
 
 The README was reviewed and validated by its author against the project's implementation, available documentation, and recorded HPC results. Commands and experiments described as completed were executed on the University HPC cluster, with their results checked against the corresponding outputs.
+
+**Checkpoint reproducibility review (Masih Ghadbeygi, 16 Nov 2026)**
+
+The initial draft of the checkpoint reproducibility additions in Sections 3 and 8 was developed with assistance from Claude (Anthropic, https://claude.ai).
+
+I used Claude to understand the existing benchmark scripts and timing files, check the README commands and links against the repository, identify the node-selection limitation, and improve and correct the wording of the documentation. I also used Claude to help with the structure and layout of the documentation and to clean it up.
+
+I also checked the README commands, links and figures against the repository and the committed timing CSV.
+
+Prompts included requests to compare the README with `slurm/submit_strong_scaling.sh`, `docs/benchmarking.md` and `docs/timings/strong_scaling_haskell.csv`, document where the loading, computation and writing times are recorded, link the serial-fraction analysis, and separate what the November 17 checkpoint verifies from what is still planned. After Alexandra's review on 17 Nov, I also used Claude to update the sweep instructions (a new CSV per sweep, and waiting for all jobs before validating), and to update the node-selection text after Iñigo's fix to the submit script.
 
 **References**
 
