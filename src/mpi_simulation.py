@@ -14,7 +14,7 @@
 # References:
 # https://mpi4py.readthedocs.io/en/stable/tutorial.html
 # https://numpy.org/doc/stable/reference/random/parallel.html (SeedSequence.spawn)
-# mpi_check/README mpi4py.md (verified cluster setup: module and srun launcher)
+# mpi_check/README.md (verified cluster setup: module and srun launcher)
 
 """MPI version of the railway Monte Carlo simulation (mpi4py).
 

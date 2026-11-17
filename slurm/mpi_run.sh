@@ -4,7 +4,7 @@
 # MPI benchmark job: one job = one number of ranks, repeated REPS times.
 # Each run appends one row to the timing CSV (docs/timing_schema.md + MPI columns).
 # The environment (cluster modules, srun launcher) is the one verified in
-# mpi_check/ ("README mpi4py.md").
+# mpi_check/ ("README.md").
 #
 # The number of ranks is the number of Slurm tasks, so give it to sbatch:
 #   sbatch --ntasks=<ranks> --cpus-per-task=2 slurm/mpi_run.sh <ranks> <scenarios> <reps> [csv] [kernel]

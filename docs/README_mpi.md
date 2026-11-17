@@ -83,7 +83,7 @@ only its own run.
 
 Compare all versions with:
 
-    python scripts/summarize_timings.py results/timings/strong_scaling.csv results/timings/mpi_scaling.csv --scenarios 100000
+    python scripts/summarize_timings.py docs/timings/strong_scaling_haskell.csv docs/timings/mpi_scaling_haskell.csv --scenarios 100000
 
 It prints the median time, speedup against the sequential run, parallel
 efficiency and MPI communication time per configuration.
@@ -115,8 +115,64 @@ setting the compute time, and, as with multiprocessing, hyperthreads if a
 rank does not have its own core. The measured values are in the next section.
 
 ## Results
-*To be filled with the cluster runs (job ids, node, date), using the table from
-`scripts/summarize_timings.py`.*
+Full sweep on the cluster: 100,000 scenarios, seed 42, Python kernel, 60 stations,
+node `haskell`, 5 repetitions per size (30 runs), one rank per physical core
+(2 Slurm CPUs per rank). Raw rows: `docs/timings/mpi_scaling_haskell.csv`
+(MPI runs of 15 Nov 2026, jobs 30307 to 30312 and a resubmission of the 32-rank
+job). Values are medians of the 5 runs.
+
+### MPI strong scaling
+| Ranks | Elapsed (s) | Compute (s) | Communication (s) | Speedup (vs 1 rank) | Efficiency |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 605.9 | 605.7 | 0.005 | 1.00 | 100% |
+| 2 | 305.4 | 305.2 | 0.004 | 1.98 | 99% |
+| 4 | 154.1 | 153.9 | 0.004 | 3.93 | 98% |
+| 8 | 77.6 | 77.4 | 0.005 | 7.81 | 98% |
+| 16 | 39.5 | 39.2 | 0.004 | 15.3 | 96% |
+| 32 | 20.0 | 19.8 | 0.005 | 30.3 | 95% |
+
+- **Communication is negligible.** Broadcast plus gather is about 5 ms in every
+  run, around 0.03% of the 32-rank time and constant in the number of ranks (the
+  results are 4.8 MB in total). The difference between `elapsed_s` and
+  `compute_s` (about 0.2 s) is reading the data, sorting and writing the CSV on
+  rank 0.
+- **The remaining loss of efficiency (5% at 32 ranks) is inside the compute
+  phase**, not in the messages: 605.7 s / 32 = 18.9 s would be ideal, 19.8 s was
+  measured. We did not measure why (see Limitations).
+
+### Comparison with the other versions (same node, `haskell`)
+Sequential and multiprocessing values are medians from
+`docs/timings/strong_scaling_haskell.csv` (Iñigo Gonzalez del Rey; runs of 16 Nov
+2026). To compare the versions with each other, speedup and efficiency use one
+common reference: the sequential run on `haskell` (582.2 s).
+
+| Workers | Multiprocessing (s) | MPI (s) | Speedup mult. | Speedup MPI | Efficiency mult. | Efficiency MPI |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 590.6 | 605.9 | 0.99 | 0.96 | 99% | 96% |
+| 2 | 296.8 | 305.4 | 1.96 | 1.91 | 98% | 95% |
+| 4 | 149.2 | 154.1 | 3.90 | 3.78 | 98% | 94% |
+| 8 | 92.1 | 77.6 | 6.32 | 7.50 | 79% | 94% |
+| 16 | 47.6 | 39.5 | 12.2 | 14.7 | 76% | 92% |
+| 32 | 24.7 | 20.0 | 23.6 | 29.1 | 74% | 91% |
+
+What the table shows:
+- From 1 to 4 workers both versions give almost the same time; MPI is 3% slower.
+- From 8 workers, MPI is 16% to 19% faster than multiprocessing (77.6 s against
+  92.1 s at 8, 20.0 s against 24.7 s at 32). Multiprocessing shows a drop in
+  efficiency between 4 and 8 workers (`docs/scaling_interpretation.md`); the MPI
+  runs do not show that drop.
+
+### Why we do not claim MPI is better
+The two sweeps were not run at the same moment. The multiprocessing runs have a
+median node load of 13 to 20 for 2 to 32 workers (`node_load_1m`); the MPI runs
+were made on another day, when other jobs on the node were different. Moving the
+sequential reference between nodes also changes it by about 12% in Iñigo's file
+(582 s on `haskell`, 653 s on `julia`). So the difference at 8 to 32 workers is
+real in these measurements, but it can come from the state of the node and not
+from the programming model. The design differences that could matter (MPI sends
+one NumPy array per rank, while the multiprocessing pool sends lists of
+dictionaries through queues) were not tested. To decide it, run
+multiprocessing and MPI alternately in the same job on an idle node.
 
 ## How the team can teach it in the final presentation
 1. Show that the work is "embarrassingly parallel": scenarios do not depend on
@@ -130,9 +186,15 @@ rank does not have its own core. The measured values are in the next section.
 
 ## Limitations
 - Only one node was used; multi-node runs were not tested.
+- The MPI and multiprocessing sweeps were run on different days, so the
+  difference between them is a measurement, not an explanation (see Results).
+- The cause of the 5% efficiency loss at 32 ranks was not measured; the shared
+  node (memory bandwidth, caches, clock speed) is a hypothesis.
 - The static block split assumes scenarios cost about the same. The
   `compute_min_s` / `compute_s` columns show whether that holds.
-- The real-MPI test and the cluster timings must be run on the cluster.
+- `tests/test_mpi_simulation.py` runs the real-MPI test only where `mpirun` works;
+  on the cluster, correctness was checked with `slurm/check_mpi_equivalence.sh`
+  (1, 2, 4, 8, 16 ranks, 500 scenarios: all byte-identical to the sequential run).
 
 ## Use of AI
 `src/mpi_simulation.py`, its tests, the Slurm and helper scripts were developed
