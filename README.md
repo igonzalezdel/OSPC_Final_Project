@@ -404,26 +404,47 @@ The figures use the verified single-node dataset. The older `docs/timings/strong
 
 ### How the strong-scaling sweep was submitted
 
-The sweep in `docs/timings/strong_scaling_haskell.csv` consists of seven Slurm jobs (sequential reference, plus 1, 2, 4, 8, 16 and 32 workers), each running five repetitions of one configuration. To submit the same sweep from the repository root on the cluster:
+The sweep in `docs/timings/strong_scaling_haskell.csv` consists of seven Slurm jobs (sequential reference, plus 1, 2, 4, 8, 16 and 32 workers), each running five repetitions of one configuration. The seven jobs were Slurm jobs 30693–30699, all from git commit `05edb4e`.
 
-```bash
-bash slurm/submit_strong_scaling.sh 100000 5 results/timings/strong_scaling_haskell.csv
-python scripts/validate_timings.py results/timings/strong_scaling_haskell.csv --min-reps 5
-```
+To submit a new sweep from the repository root on the cluster:
 
-The seven jobs were Slurm jobs 30693–30699, all from git commit `05edb4e`.
+1. Choose a **new CSV file name for every sweep**, for example with the date. `scripts/run_benchmark.py` appends one row per run to the file it is given, so reusing an existing file (such as `strong_scaling_haskell.csv`) mixes old and new rows and duplicates results.
+
+   ```bash
+   CSV=results/timings/strong_scaling_$(date +%Y%m%d_%H%M).csv
+   bash slurm/submit_strong_scaling.sh 100000 5 "$CSV"
+   ```
+
+2. `submit_strong_scaling.sh` only **submits** the seven jobs and returns at once; the jobs then wait in the queue and run on their own. Wait until all seven have finished before validating:
+
+   ```bash
+   squeue -u "$USER"
+   sacct -u "$USER" --format=JobID,JobName,State,ExitCode,Elapsed,NodeList
+   ```
+
+   Repeat `squeue` until no `railway_benchmark` job is listed, then check with `sacct` that all seven show `COMPLETED` and exit code `0:0`. At 100,000 scenarios the slowest jobs (sequential and 1 worker) run five repetitions of about 10 minutes each, so they take about 50 minutes, plus queue time.
+
+3. Only then validate the timing file (use the same `$CSV`; in a new terminal, type its name again):
+
+   ```bash
+   python scripts/validate_timings.py "$CSV" --min-reps 5
+   ```
+
+   Validating while jobs are still running reports missing repetitions, because their rows have not been written yet.
 
 **Known limitation – node selection is not enforced.** [docs/benchmarking.md](docs/benchmarking.md) describes a fourth argument that pins all jobs to one node. The version of `slurm/submit_strong_scaling.sh` on `main` does not accept or enforce a node argument: it does not pass `--nodelist` to `sbatch`, so Slurm may place the jobs on different nodes. The nodes run at different speeds, so a sweep spread over several nodes is not a valid strong-scaling result (this is what happened to the older `docs/timings/strong_scaling.csv`).
 
 All 35 rows of `docs/timings/strong_scaling_haskell.csv` record `node = haskell`, so this dataset is a valid single-node result, but this was not guaranteed by the script. Until a fix has been tested on the cluster, either:
 
 - check the `node` column of the timing CSV after every sweep and repeat it if the nodes differ, or
-- submit each configuration manually with an explicit node, for example:
+- submit each configuration manually with an explicit node and the same new CSV for the whole sweep, for example:
 
 ```bash
 mkdir -p logs
-sbatch --nodelist=haskell --cpus-per-task=16 slurm/benchmark.sh multiprocessing 8 100000 5 results/timings/strong_scaling_haskell.csv
+sbatch --nodelist=haskell --cpus-per-task=16 slurm/benchmark.sh multiprocessing 8 100000 5 "$CSV"
 ```
+
+The fix of the script itself is tracked in the separate task "Integrate Slurm jobs and validate timing CSV output".
 
 ### Where to find the loading, computation and writing times
 
@@ -530,7 +551,7 @@ I used Claude to understand the existing benchmark scripts and timing files, che
 
 I also checked the README commands, links and figures against the repository and the committed timing CSV.
 
-Prompts included requests to compare the README with `slurm/submit_strong_scaling.sh`, `docs/benchmarking.md` and `docs/timings/strong_scaling_haskell.csv`, document where the loading, computation and writing times are recorded, link the serial-fraction analysis, and separate what the November 17 checkpoint verifies from what is still planned.
+Prompts included requests to compare the README with `slurm/submit_strong_scaling.sh`, `docs/benchmarking.md` and `docs/timings/strong_scaling_haskell.csv`, document where the loading, computation and writing times are recorded, link the serial-fraction analysis, and separate what the November 17 checkpoint verifies from what is still planned. After Alexandra's review on 17 Nov, I also used Claude to update the sweep instructions (a new CSV per sweep, and waiting for all jobs before validating).
 
 **References**
 
